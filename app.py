@@ -59,6 +59,16 @@ if process_button:
     if not source_input:
         st.error("Please provide a valid source (URL or File Path).")
     else:
+        # Friendly warning if it looks like a YouTube URL
+        is_youtube = "youtube.com" in source_input or "youtu.be" in source_input
+        if is_youtube:
+            st.warning(
+                "⚠️ **YouTube (Beta):** The hosted Streamlit demo cannot download some YouTube videos "
+                "because YouTube blocks requests from shared cloud servers.\n\n"
+                "✅ **Run the app locally** — YouTube works perfectly there.",
+                icon=None,
+            )
+
         try:
             with st.status("🛠️ Working on your request...", expanded=True) as status:
                 st.write("📥 Processing input...")
@@ -88,7 +98,18 @@ if process_button:
                 }
                 status.update(label="✅ Processing Complete!", state="complete", expanded=False)
         except Exception as e:
-            st.error(f"An error occurred: {e}")
+            err = str(e)
+            if "403" in err or "Forbidden" in err or "unable to download" in err.lower():
+                st.error(
+                    "❌ **YouTube blocked the download (HTTP 403).**\n\n"
+                    "The hosted Streamlit demo cannot download YouTube videos because "
+                    "YouTube blocks requests from shared cloud servers.\n\n"
+                    "**What you can do:**\n"
+                    "- ✅ Run the app locally — YouTube works perfectly there\n"
+                    "- ✅ Upload an MP4/MP3/WAV file directly instead"
+                )
+            else:
+                st.error(f"An error occurred: {e}")
 
 # --- Display Results ---
 if st.session_state.processed_data:
@@ -96,7 +117,32 @@ if st.session_state.processed_data:
     
     st.divider()
     st.header(f"📌 {data['title']}")
-    
+
+    # ── Download buttons (NEW) ──────────────────────────────────────
+    dl_col1, dl_col2, _ = st.columns([1, 1, 4])
+    with dl_col1:
+        st.download_button(
+            label="⬇️ Download Transcript",
+            data=data["transcript"],
+            file_name="transcript.txt",
+            mime="text/plain",
+        )
+    with dl_col2:
+        summary_md = (
+            f"# {data['title']}\n\n"
+            f"## Summary\n{data['summary']}\n\n"
+            f"## Action Items\n{data['action_items']}\n\n"
+            f"## Key Decisions\n{data['key_decisions']}\n\n"
+            f"## Open Questions\n{data['open_questions']}"
+        )
+        st.download_button(
+            label="⬇️ Download Summary",
+            data=summary_md,
+            file_name="summary.md",
+            mime="text/markdown",
+        )
+    # ───────────────────────────────────────────────────────────────
+
     # Create Tabs for different sections
     tab1, tab2, tab3, tab4 = st.tabs(["📝 Summary", "🔍 Key Insights", "📜 Full Transcript", "💬 Chat with Video"])
     
@@ -124,27 +170,20 @@ if st.session_state.processed_data:
     with tab4:
         st.subheader("Chat with your Meeting")
         
-        # Display chat messages from history on app rerun
         for message in st.session_state.chat_history:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-        # React to user input
         if prompt := st.chat_input("Ask something about the video..."):
-            # Display user message in chat message container
             st.chat_message("user").markdown(prompt)
-            # Add user message to chat history
             st.session_state.chat_history.append({"role": "user", "content": prompt})
 
             with st.spinner("Thinking..."):
-                # Get response from RAG engine
                 response = ask_question(data['rag_chain'], prompt)
                 
-                # Display assistant response in chat message container
                 with st.chat_message("assistant"):
                     st.markdown(response)
                 
-                # Add assistant response to chat history
                 st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 else:
