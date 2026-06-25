@@ -20,7 +20,6 @@ def download_youtube_audio(url: str) -> str:
         "format": "bestaudio[ext=m4a]/bestaudio/best",
         "outtmpl": output_template,
         "noplaylist": True,
-
         "quiet": True,
         "no_warnings": True,
         "extract_flat": False,
@@ -33,9 +32,6 @@ def download_youtube_audio(url: str) -> str:
             )
         },
 
-        # Uncomment if cookies are required
-        # "cookiefile": "cookies.txt",
-
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -45,26 +41,90 @@ def download_youtube_audio(url: str) -> str:
         ],
     }
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
 
-            wav_file = (
-                os.path.splitext(
-                    ydl.prepare_filename(info)
-                )[0]
-                + ".wav"
-            )
+        return os.path.splitext(
+            ydl.prepare_filename(info)
+        )[0] + ".wav"
 
-            if not os.path.exists(wav_file):
-                raise RuntimeError(
-                    "Download finished but WAV file was not created."
-                )
 
-            return wav_file
+# ==========================================================
+# Convert Local File
+# ==========================================================
 
-    except yt_dlp.utils.DownloadError as e:
-        raise RuntimeError(f"YouTube DownloadError:\n{e}")
+def convert_to_wav(input_path: str) -> str:
 
-    except Exception as e:
-        raise RuntimeError(f"Unexpected Error:\n{e}")
+    output_path = (
+        os.path.splitext(input_path)[0]
+        + "_converted.wav"
+    )
+
+    audio = AudioSegment.from_file(input_path)
+
+    audio = (
+        audio
+        .set_channels(1)
+        .set_frame_rate(16000)
+    )
+
+    audio.export(output_path, format="wav")
+
+    return output_path
+
+
+# ==========================================================
+# Chunk Audio
+# ==========================================================
+
+def chunk_audio(
+    wav_path: str,
+    chunk_minutes: int = 10
+) -> List[str]:
+
+    audio = AudioSegment.from_wav(wav_path)
+
+    chunk_ms = chunk_minutes * 60 * 1000
+
+    chunks = []
+
+    base = os.path.splitext(wav_path)[0]
+
+    for i, start in enumerate(range(0, len(audio), chunk_ms)):
+        chunk = audio[start:start + chunk_ms]
+
+        chunk_path = f"{base}_chunk_{i}.wav"
+
+        chunk.export(chunk_path, format="wav")
+
+        chunks.append(chunk_path)
+
+    return chunks
+
+
+# ==========================================================
+# Main Processing Function
+# ==========================================================
+
+def process_input(source: str) -> List[str]:
+
+    if source.startswith(("http://", "https://")):
+
+        print("Downloading YouTube audio...")
+
+        wav_path = download_youtube_audio(source)
+
+    else:
+
+        if not os.path.exists(source):
+            raise FileNotFoundError(source)
+
+        if source.lower().endswith(".wav"):
+
+            wav_path = source
+
+        else:
+
+            wav_path = convert_to_wav(source)
+
+    return chunk_audio(wav_path)
