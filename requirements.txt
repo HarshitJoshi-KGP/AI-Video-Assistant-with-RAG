@@ -1,0 +1,49 @@
+# ===================================================
+# AI Meeting Assistant
+# ===================================================
+
+# ---------- UI ----------
+streamlit>=1.37.0
+
+# ---------- Environment ----------
+python-dotenv>=1.0.1
+
+# ---------- LLM ----------
+langchain
+langchain-core
+langchain-community
+langchain-mistralai
+
+# ---------- Whisper ----------
+openai-whisper
+torch
+torchaudio
+ffmpeg-python
+
+# ---------- YouTube ----------
+yt-dlp
+
+# ---------- RAG ----------
+chromadb
+langchain-chroma
+sentence-transformers
+langchain-huggingface
+faiss-cpu
+
+# ---------- Document Loaders ----------
+pypdf
+beautifulsoup4
+unstructured
+
+# ---------- Export ----------
+fpdf2
+
+# ---------- API ----------
+fastapi
+uvicorn
+
+# ---------- Utilities ----------
+numpy<2
+requests
+pydub
+tiktoken
