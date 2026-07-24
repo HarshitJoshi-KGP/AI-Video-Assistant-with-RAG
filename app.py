@@ -41,8 +41,25 @@ if 'chat_history' not in st.session_state:
 with st.sidebar:
     st.title("⚙️ Settings")
     st.info("Upload a video/audio source or provide a YouTube link to get started.")
-    
-    source_input = st.text_input("YouTube URL or Local File Path", placeholder="https://youtube.com/...")
+
+    source_mode = st.radio("Source type", ["YouTube URL", "Upload File"], horizontal=True)
+
+    source_input = None
+    if source_mode == "YouTube URL":
+        source_input = st.text_input("YouTube URL", placeholder="https://youtube.com/...")
+    else:
+        uploaded_file = st.file_uploader(
+            "Upload a video/audio file",
+            type=["mp4", "mp3", "wav", "m4a", "mov", "mkv"],
+        )
+        if uploaded_file is not None:
+            os.makedirs("uploads", exist_ok=True)
+            temp_path = os.path.join("uploads", uploaded_file.name)
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            source_input = temp_path
+            st.success(f"Uploaded: {uploaded_file.name}")
+
     language = st.selectbox("Language", ["english", "hinglish"], index=0)
     
     process_button = st.button("🚀 Process Media", use_container_width=True)
